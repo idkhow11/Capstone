@@ -6,7 +6,7 @@ interface Props {
   onSearch: (query: string) => void
 }
 
-export default function SearchHome({ platform, setPlatform, onSearch }: Props) {
+export default function SearchHome({ onSearch }: Props) {
   const [query, setQuery] = useState('')
 
   const handleSearch = () => {
@@ -15,77 +15,71 @@ export default function SearchHome({ platform, setPlatform, onSearch }: Props) {
   }
 
   return (
-    <div style={{ padding: '20px' }}>
+    <div style={{
+      height: '100vh',
+      boxSizing: 'border-box',
+      background: '#ffffff',
+      color: '#111',
+      fontFamily: 'sans-serif',
+      display: 'flex',
+      flexDirection: 'column',
+      padding: '0'
+    }}>
 
-      {/* 헤더 */}
-      <div style={{ marginBottom: '32px' }}>
+      {/* 헤더 - 토글 버튼과 수평 맞춤 */}
+      <div style={{
+        height: '56px',
+        padding: '0 56px 0 20px',
+        display: 'flex',
+        alignItems: 'center',
+        borderBottom: '1px solid #f0f0f0',
+        flexShrink: 0
+      }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '20px' }}>🛒</span>
-          <span style={{ fontSize: '18px', fontWeight: 'bold' }}>쇼핑 도우미</span>
-          {/* <span style={{
-            marginLeft: 'auto', fontSize: '11px', color: '#00c471',
-            background: '#00c47120', padding: '2px 8px', borderRadius: '10px'
-          }}>● 실시간</span> */}
+          <span style={{ fontSize: '18px' }}>🛒</span>
+          <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#111' }}>
+            쇼핑 도우미
+          </span>
         </div>
-        <p style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>
-          똑똑한 쇼핑의 시작
-        </p>
-        <p style={{ fontSize: '20px', color: '#ffffff', marginTop: '4px' }}>
+      </div>
+
+      {/* 본문 */}
+      <div style={{ padding: '28px 20px', flex: 1 }}>
+
+        {/* 타이틀 */}
+        <p style={{
+          fontSize: '22px',
+          fontWeight: 'bold',
+          color: '#111',
+          marginBottom: '24px',
+          lineHeight: '1.4'
+        }}>
           오늘은 어떻게 도와드릴까요?
         </p>
-      </div>
 
-      {/* 플랫폼 선택 */}
-      <div style={{ marginBottom: '20px' }}>
-        <p style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>
-          플랫폼 선택
-        </p>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {(['kurly', 'danawa'] as const).map((p) => (
-            <button
-              key={p}
-              onClick={() => setPlatform(p)}
-              style={{
-                flex: 1, padding: '10px', borderRadius: '10px', cursor: 'pointer',
-                border: platform === p
-                  ? `2px solid ${p === 'kurly' ? '#5f0080' : '#0057ff'}`
-                  : '2px solid #333',
-                background: platform === p
-                  ? (p === 'kurly' ? '#5f008020' : '#0057ff20')
-                  : 'transparent',
-                color: platform === p
-                  ? (p === 'kurly' ? '#bf59cf' : '#4d94ff')
-                  : '#888',
-                fontWeight: 'bold', fontSize: '13px'
-              }}
-            >
-              {p === 'kurly' ? '🟣 마켓컬리' : '🔵 다나와'}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* 검색창 */}
-      <div>
+        {/* 검색창 */}
         <div style={{
-          display: 'flex', alignItems: 'center',
-          background: '#1e2130', borderRadius: '12px',
-          padding: '12px 16px', marginBottom: '10px',
-          border: '1px solid #333'
+          display: 'flex',
+          alignItems: 'center',
+          background: '#f5f5f5',
+          borderRadius: '12px',
+          padding: '14px 16px',
+          border: '1px solid #e0e0e0',
+          marginBottom: '10px'
         }}>
-          <span style={{ marginRight: '8px', color: '#888' }}>🔍</span>
+          <span style={{ marginRight: '8px', color: '#aaa' }}>🔍</span>
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            placeholder={
-              platform === 'kurly'
-                ? '예: 갑각류 없는 라면, 당류 낮은 간식'
-                : '예: 무선 무소음 마우스 5~10만원'
-            }
+            placeholder="우유 없는 샐러드, 무소음 마우스 추천..."
             style={{
-              flex: 1, background: 'transparent', border: 'none',
-              outline: 'none', color: 'white', fontSize: '13px'
+              flex: 1,
+              background: 'transparent',
+              border: 'none',
+              outline: 'none',
+              color: '#111',
+              fontSize: '14px',
             }}
           />
           {query && (
@@ -93,7 +87,7 @@ export default function SearchHome({ platform, setPlatform, onSearch }: Props) {
               onClick={() => setQuery('')}
               style={{
                 background: 'none', border: 'none',
-                color: '#888', cursor: 'pointer', fontSize: '16px'
+                color: '#aaa', cursor: 'pointer', fontSize: '16px'
               }}
             >
               ✕
@@ -101,24 +95,16 @@ export default function SearchHome({ platform, setPlatform, onSearch }: Props) {
           )}
         </div>
 
-        <button
-          onClick={handleSearch}
-          disabled={!query.trim()}
-          style={{
-            width: '100%', padding: '14px', borderRadius: '12px', border: 'none',
-            background: query.trim()
-              ? (platform === 'kurly' ? '#5f0080' : '#0057ff')
-              : '#333',
-            color: query.trim() ? 'white' : '#666',
-            fontSize: '15px', fontWeight: 'bold',
-            cursor: query.trim() ? 'pointer' : 'not-allowed',
-            transition: 'all 0.2s'
-          }}
-        >
-          검색하기
-        </button>
-      </div>
+        {/* 안내 텍스트 */}
+        <p style={{
+          fontSize: '12px',
+          color: '#aaa',
+          paddingLeft: '4px'
+        }}>
+          Enter 키를 눌러 검색하세요
+        </p>
 
+      </div>
     </div>
   )
 }
