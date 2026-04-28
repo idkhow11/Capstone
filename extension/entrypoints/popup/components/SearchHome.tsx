@@ -22,13 +22,16 @@ export default function SearchHome({ platform, setPlatform, onSearch }: Props) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '20px' }}>🛒</span>
           <span style={{ fontSize: '18px', fontWeight: 'bold' }}>쇼핑 도우미</span>
-          <span style={{
+          {/* <span style={{
             marginLeft: 'auto', fontSize: '11px', color: '#00c471',
             background: '#00c47120', padding: '2px 8px', borderRadius: '10px'
-          }}>● 실시간</span>
+          }}>● 실시간</span> */}
         </div>
         <p style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>
           똑똑한 쇼핑의 시작
+        </p>
+        <p style={{ fontSize: '20px', color: '#ffffff', marginTop: '4px' }}>
+          오늘은 어떻게 도와드릴까요?
         </p>
       </div>
 

@@ -19,7 +19,7 @@ export default function App() {
   ])
   const [activeId, setActiveId] = useState<number | null>(null)
   const [hoveredId, setHoveredId] = useState<number | null>(null)
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const handleSearch = (q: string) => {
     const newItem: SearchHistory = {
@@ -31,6 +31,7 @@ export default function App() {
     setActiveId(newItem.id)
     setQuery(q)
     setScreen('result')
+    setSidebarOpen(false) // 검색 시 사이드바 닫기
   }
 
   const handleHistoryClick = (item: SearchHistory) => {
@@ -38,12 +39,14 @@ export default function App() {
     setQuery(item.query)
     setPlatform(item.platform)
     setScreen('result')
+    setSidebarOpen(false) // 선택 시 사이드바 닫기
   }
 
   const handleNewChat = () => {
     setActiveId(null)
     setQuery('')
     setScreen('home')
+    setSidebarOpen(false)
   }
 
   const handleDeleteHistory = (id: number, e: React.MouseEvent) => {
@@ -57,46 +60,79 @@ export default function App() {
 
   return (
     <div style={{
-      display: 'flex',
+      position: 'relative',
       width: '100%',
       minHeight: '100vh',
       background: '#0f1117',
       color: 'white',
-      fontFamily: 'sans-serif'
+      fontFamily: 'sans-serif',
+      overflow: 'hidden'
     }}>
 
-      {/* 왼쪽 사이드바 */}
-      <div style={{
-        width: sidebarOpen ? '140px' : '32px',
-        minHeight: '100vh',
-        background: '#161820',
-        borderRight: '1px solid #222',
-        display: 'flex',
-        flexDirection: 'column',
-        padding: '12px 8px',
-        flexShrink: 0,
-        overflow: 'hidden',
-        transition: 'width 0.2s ease'
-      }}>
+      {/* 토글 버튼 (항상 고정) */}
+      <button
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        style={{
+          position: 'absolute',
+          top: '12px',
+          right: '12px',
+          zIndex: 100,
+          background: '#161820',
+          border: '1px solid #333',
+          color: '#888',
+          cursor: 'pointer',
+          fontSize: '14px',
+          padding: '6px 10px',
+          borderRadius: '8px',
+          transition: 'all 0.2s'
+        }}
+      >
+        {sidebarOpen ? '→' : '☰'}
+      </button>
 
-        {/* 토글 버튼 */}
-        <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          style={{
-            background: 'none', border: 'none',
-            color: '#888', cursor: 'pointer',
-            fontSize: '14px', padding: '4px',
-            marginBottom: '12px',
-            alignSelf: sidebarOpen ? 'flex-end' : 'center',
-            transition: 'all 0.2s'
-          }}
-        >
-          {sidebarOpen ? '←' : '→'}
-        </button>
+      {/* 사이드바 오버레이 */}
+      {sidebarOpen && (
+        <>
+          {/* 배경 딤 처리 - 클릭하면 닫힘 */}
+          <div
+            onClick={() => setSidebarOpen(false)}
+            style={{
+              position: 'absolute',
+              top: 0, left: 0, right: 0, bottom: 0,
+              background: 'rgba(0,0,0,0.4)',
+              zIndex: 50
+            }}
+          />
 
-        {/* 사이드바 열렸을 때만 표시 */}
-        {sidebarOpen && (
-          <>
+          {/* 사이드바 본체 */}
+          <div style={{
+            position: 'absolute',
+            top: 0, right: 0,
+            width: '160px',
+            minHeight: '100%',
+            background: '#161820',
+            borderLeft: '1px solid #222',
+            display: 'flex',
+            flexDirection: 'column',
+            padding: '12px 8px',
+            zIndex: 60,
+            animation: 'slideIn 0.2s ease'
+          }}>
+
+            {/* 닫기 버튼 */}
+            <button
+              onClick={() => setSidebarOpen(false)}
+              style={{
+                background: 'none', border: 'none',
+                color: '#888', cursor: 'pointer',
+                fontSize: '14px', padding: '4px',
+                marginBottom: '12px',
+                alignSelf: 'flex-start'
+              }}
+            >
+              →
+            </button>
+
             {/* 새 검색 버튼 */}
             <button
               onClick={handleNewChat}
@@ -150,7 +186,6 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* 호버하거나 선택됐을 때만 X 버튼 표시 */}
                   <button
                     onClick={(e) => handleDeleteHistory(item.id, e)}
                     style={{
@@ -166,12 +201,12 @@ export default function App() {
                 </div>
               ))}
             </div>
-          </>
-        )}
-      </div>
+          </div>
+        </>
+      )}
 
-      {/* 오른쪽 메인 영역 */}
-      <div style={{ flex: 1, overflow: 'hidden' }}>
+      {/* 메인 영역 - 항상 동일한 크기 */}
+      <div style={{ width: '100%', minHeight: '100vh' }}>
         {screen === 'home' ? (
           <SearchHome
             platform={platform}
