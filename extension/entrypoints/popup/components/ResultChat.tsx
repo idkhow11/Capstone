@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 
 /// <reference types="chrome"/>
 
+// ─── 타입 정의 ───────────────────────────────────────
 interface Message {
   role: 'user' | 'ai'
   content: string
@@ -18,72 +19,71 @@ interface Product {
 
 interface Props {
   query: string
-  platform: 'kurly' | 'danawa'
+  platform: 'danawa'
   onBack: () => void
 }
 
-export default function ResultChat({ query, platform, onBack }: Props) {
+// ─── API 호출 (백엔드 연결 시 이 부분만 교체) ────────
+const BASE_URL = 'http://localhost:8000'
+
+async function searchAPI(query: string): Promise<{
+  recommendation: string
+  products: Product[]
+}> {
+  // 백엔드 연결 전 mock 응답
+  // 실제 연결 시 아래 주석 해제하고 mock 부분 삭제
+  /*
+  const res = await fetch(`${BASE_URL}/search`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query, platform: 'danawa' })
+  })
+  if (!res.ok) throw new Error('검색 실패')
+  return res.json()
+  */
+
+  await new Promise(resolve => setTimeout(resolve, 1500))
+  return getMockResponse(query)
+}
+
+// ─── 컴포넌트 ─────────────────────────────────────────
+export default function ResultChat({ query, onBack }: Props) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const initialized = useRef(false)
 
-  // 수정 - 한 번만 실행되게
-const initialized = useRef(false)
-
-useEffect(() => {
-  if (initialized.current) return
-  initialized.current = true
-  
-  setMessages([{ role: 'user', content: query }])
-  fetchResult(query)
-}, [])
+  useEffect(() => {
+    if (initialized.current) return
+    initialized.current = true
+    setMessages([{ role: 'user', content: query }])
+    fetchResult(query)
+  }, [])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // const fetchResult = async (q: string) => {
-  //   setLoading(true)
-  //   try {
-  //     const res = await fetch('http://localhost:8000/search', {
-  //       method: 'POST',
-  //       headers: { 'Content-Type': 'application/json' },
-  //       body: JSON.stringify({ query: q, platform })
-  //     })
-  //     const data = await res.json()
-  //     setMessages(prev => [...prev, {
-  //       role: 'ai',
-  //       content: data.recommendation,
-  //       products: data.products
-  //     }])
-  //   } catch {
-  //     setMessages(prev => [...prev, {
-  //       role: 'ai',
-  //       content: '오류가 발생했어요. 다시 시도해주세요.'
-  //     }])
-  //   } finally {
-  //     setLoading(false)
-  //   }
-  // }
-
   const fetchResult = async (q: string) => {
-  setLoading(true)
+    setLoading(true)
+    try {
+      const data = await searchAPI(q)
+      setMessages(prev => [...prev, {
+        role: 'ai',
+        content: data.recommendation,
+        products: data.products
+      }])
+    } catch {
+      setMessages(prev => [...prev, {
+        role: 'ai',
+        content: '오류가 발생했어요. 다시 시도해주세요.'
+      }])
+    } finally {
+      setLoading(false)
+    }
+  }
 
-  // 로딩 효과를 위해 1.5초 대기
-  await new Promise(resolve => setTimeout(resolve, 1500))
-
-  // 질문에 따라 다른 답변 반환
-  const mockResponse = getMockResponse(q, platform)
-  
-  setMessages(prev => [...prev, {
-    role: 'ai',
-    content: mockResponse.recommendation,
-    products: mockResponse.products
-  }])
-
-  setLoading(false)
-}
   const handleSend = () => {
     if (!input.trim() || loading) return
     const q = input
@@ -105,12 +105,13 @@ useEffect(() => {
       {/* 헤더 */}
       <div style={{
         height: '56px',
-        padding: '0px 16px',
+        padding: '0px 56px 0px 16px',
         borderBottom: '1px solid #eee',
         display: 'flex',
         alignItems: 'center',
         gap: '12px',
-        background: '#ffffff'
+        background: '#ffffff',
+        boxSizing: 'border-box'
       }}>
         <button
           onClick={onBack}
@@ -122,7 +123,7 @@ useEffect(() => {
           ←
         </button>
         <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#111' }}>
-          {/*platform === 'kurly' ? '🟣 마켓컬리' : '🔵 다나와'*/} 검색 결과
+          🔵 다나와 검색 결과
         </span>
       </div>
 
@@ -151,7 +152,8 @@ useEffect(() => {
               background: msg.role === 'user' ? '#111' : '#f5f5f5',
               color: msg.role === 'user' ? '#fff' : '#111',
               fontSize: '13px',
-              lineHeight: '1.5'
+              lineHeight: '1.5',
+              whiteSpace: 'pre-wrap'
             }}>
               {msg.content}
             </div>
@@ -174,7 +176,7 @@ useEffect(() => {
                   style={{
                     width: '60px', height: '60px',
                     borderRadius: '8px', objectFit: 'cover',
-                    background: '#eee'
+                    background: '#eee', flexShrink: 0
                   }}
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = 'none'
@@ -191,7 +193,7 @@ useEffect(() => {
                   </div>
                   <div style={{
                     fontSize: '13px', fontWeight: 'bold',
-                    color: platform === 'kurly' ? '#5f0080' : '#0057ff'
+                    color: '#0057ff'
                   }}>
                     {product.price?.toLocaleString()}원
                   </div>
@@ -207,7 +209,7 @@ useEffect(() => {
                   onClick={() => chrome.tabs.create({ url: product.url })}
                   style={{
                     padding: '6px 10px',
-                    background: platform === 'kurly' ? '#5f0080' : '#0057ff',
+                    background: '#0057ff',
                     border: 'none', borderRadius: '8px',
                     color: 'white', fontSize: '11px',
                     cursor: 'pointer', flexShrink: 0,
@@ -287,63 +289,14 @@ useEffect(() => {
   )
 }
 
-function getMockResponse(query: string, platform: 'kurly' | 'danawa') {
+// ─── Mock 데이터 (백엔드 연결 시 삭제) ───────────────
+function getMockResponse(query: string): {
+  recommendation: string
+  products: Product[]
+} {
 
-  // 마켓컬리 - 운동 후 식사
-  if (query.includes('운동') || query.includes('단백질') || query.includes('저녁')) {
-    return {
-      recommendation: `운동 후 저녁 식사로 단백질을 보충하면서, 밤에 부담 없이 가볍고 건강하게 한 끼를 해결하고 싶으신 거군요! 운동으로 지친 몸에 활력을 불어넣어 줄 맛있는 메뉴들로 골라봤어요. 😊`,
-      products: [
-        {
-          name: '[롤린스 다이닝] 구운채소 닭가슴살 샐러드',
-          price: 7900,
-          url: 'https://www.kurly.com/goods/1001847697',
-          thumbnail: 'https://img.kurly.com/product/image/2025/1001847697.jpg',
-          reason: '맛있는 구운 채소와 촉촉한 닭가슴살이 듬뿍 — 든든하면서도 건강한 한 끼를 간편하게 즐길 수 있어요. 단백질 보충에 최고이고 밤에도 부담 없이 속 편하게 드실 수 있답니다!'
-        },
-        {
-          name: '[햇반] 파로곤약 닭가슴살 주먹밥 2종 (택 1)',
-          price: 8980,
-          url: 'https://www.kurly.com/goods/1001765127',
-          thumbnail: 'https://img.kurly.com/product/image/2025/1001765127.jpg',
-          reason: '고단백 저탄수 건강식으로 아주 훌륭해요! 꼬들꼬들한 파로곤약밥에 닭가슴살이 더해져 맛있고 든든하답니다. 전자레인지에 쏙 돌리면 되니 정말 간편해요.'
-        },
-        {
-          name: '[햇반] 라이스플랜 병아리콩퀴노아곤약밥 150g*3입',
-          price: 8940,
-          url: 'https://www.kurly.com/goods/1001626707',
-          thumbnail: 'https://img.kurly.com/product/image/2025/1001626707.jpg',
-          reason: '좀 더 가볍게, 하지만 영양 균형은 놓치지 않고 탄수화물을 보충하고 싶으실 때 좋아요. 병아리콩, 퀴노아, 곤약이 칼로리 부담 없이 맛있는 밥을 즐길 수 있답니다.'
-        }
-      ]
-    }
-  }
-
-  // 마켓컬리 - 알레르기
-  if (query.includes('갑각류') || query.includes('알레르기')) {
-    return {
-      recommendation: `갑각류 알레르기가 있으신 분께 안전한 제품들을 찾았어요! ✓ 갑각류 원재료 미포함 확인 완료된 상품들이에요.`,
-      products: [
-        {
-          name: '농심 신라면 건면',
-          price: 1580,
-          url: 'https://www.kurly.com/goods/1000100001',
-          thumbnail: 'https://img.kurly.com/product/image/2025/1000100001.jpg',
-          reason: '갑각류 성분 미포함 ✓ 나트륨 1,370mg으로 일반 라면 대비 낮은 편이에요.'
-        },
-        {
-          name: '오뚜기 진라면 순한맛',
-          price: 1350,
-          url: 'https://www.kurly.com/goods/1000100002',
-          thumbnail: 'https://img.kurly.com/product/image/2025/1000100002.jpg',
-          reason: '갑각류 성분 미포함 ✓ 순한 맛으로 자극 없이 즐길 수 있어요.'
-        }
-      ]
-    }
-  }
-
-  // 다나와 - 마우스
-  if (query.includes('마우스') || query.includes('무선') || query.includes('무소음')) {
+  // 마우스
+  if (query.includes('마우스') || query.includes('무소음') || query.includes('무선')) {
     return {
       recommendation: `무선 무소음 마우스 5~10만원대로 찾아봤어요! 조용한 환경에서도 쾌적하게 사용할 수 있는 제품들이에요. 🖱️`,
       products: [
@@ -365,14 +318,37 @@ function getMockResponse(query: string, platform: 'kurly' | 'danawa') {
     }
   }
 
+  // 키보드
+  if (query.includes('키보드') || query.includes('기계식') || query.includes('게이밍')) {
+    return {
+      recommendation: `게이밍 키보드를 찾아봤어요! 타건감과 성능 모두 만족스러운 제품들이에요. ⌨️`,
+      products: [
+        {
+          name: '로지텍 G913 TKL 무선 기계식',
+          price: 189000,
+          url: 'https://prod.danawa.com/info/?pcode=11111111',
+          thumbnail: 'https://img.danawa.com/prod_img/500000/111/111/img/11111111_1.jpg',
+          reason: '무선 + 얇은 로우프로파일 ✓ 게이밍과 사무용 모두 적합해요.'
+        },
+        {
+          name: '앱코 K935P 유선 기계식',
+          price: 45000,
+          url: 'https://prod.danawa.com/info/?pcode=22222222',
+          thumbnail: 'https://img.danawa.com/prod_img/500000/222/222/img/22222222_1.jpg',
+          reason: '가성비 최고 ✓ 청축 타건감으로 게이밍에 최적화.'
+        }
+      ]
+    }
+  }
+
   // 기본 응답
   return {
     recommendation: `"${query}"에 대한 결과를 찾았어요! 아래 상품들을 확인해보세요.`,
     products: [
       {
-        name: '추천 상품 예시 1',
-        price: 12000,
-        url: 'https://www.kurly.com',
+        name: '검색 결과 예시',
+        price: 50000,
+        url: 'https://prod.danawa.com',
         thumbnail: '',
         reason: '조건에 맞는 상품이에요.'
       }

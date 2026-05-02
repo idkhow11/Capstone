@@ -1,8 +1,6 @@
 import { useState } from 'react'
 
 interface Props {
-  platform: 'kurly' | 'danawa'
-  setPlatform: (p: 'kurly' | 'danawa') => void
   onSearch: (query: string) => void
 }
 
@@ -26,7 +24,7 @@ export default function SearchHome({ onSearch }: Props) {
       padding: '0'
     }}>
 
-      {/* 헤더 - 토글 버튼과 수평 맞춤 */}
+      {/* 헤더 */}
       <div style={{
         height: '56px',
         padding: '0 56px 0 20px',
@@ -72,7 +70,7 @@ export default function SearchHome({ onSearch }: Props) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            placeholder="우유 없는 샐러드, 무소음 마우스 추천..."
+            placeholder="무선 무소음 마우스, 게이밍 키보드 추천..."
             style={{
               flex: 1,
               background: 'transparent',
