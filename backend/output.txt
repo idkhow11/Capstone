@@ -1,0 +1,172 @@
+Traceback (most recent call last):
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/langchain_google_genai/chat_models.py", line 3071, in _generate
+    response: GenerateContentResponse = self.client.models.generate_content(
+                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        **request,
+        ^^^^^^^^^^
+    )
+    ^
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/google/genai/models.py", line 6314, in generate_content
+    return self._generate_content(
+           ~~~~~~~~~~~~~~~~~~~~~~^
+        model=model, contents=contents, config=parsed_config
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/google/genai/models.py", line 4767, in _generate_content
+    response = self._api_client.request(
+        'post', path, request_dict, http_options
+    )
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/google/genai/_api_client.py", line 1579, in request
+    response = self._request(http_request, http_options, stream=False)
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/google/genai/_api_client.py", line 1370, in _request
+    return retry(self._request_once, http_request, stream)  # type: ignore[no-any-return]
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/tenacity/__init__.py", line 470, in __call__
+    do = self.iter(retry_state=retry_state)
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/tenacity/__init__.py", line 371, in iter
+    result = action(retry_state)
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/tenacity/__init__.py", line 413, in exc_check
+    raise retry_exc.reraise()
+          ~~~~~~~~~~~~~~~~~^^
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/tenacity/__init__.py", line 184, in reraise
+    raise self.last_attempt.result()
+          ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/concurrent/futures/_base.py", line 443, in result
+    return self.__get_result()
+           ~~~~~~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/concurrent/futures/_base.py", line 395, in __get_result
+    raise self._exception
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/tenacity/__init__.py", line 473, in __call__
+    result = fn(*args, **kwargs)
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/google/genai/_api_client.py", line 1349, in _request_once
+    errors.APIError.raise_for_response(response)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/google/genai/errors.py", line 155, in raise_for_response
+    cls.raise_error(response.status_code, response_json, response)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/google/genai/errors.py", line 184, in raise_error
+    raise ClientError(status_code, response_json, response)
+google.genai.errors.ClientError: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 0, model: gemini-3.1-pro\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-3.1-pro\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-3.1-pro\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 0, model: gemini-3.1-pro\nPlease retry in 27.022192347s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_input_token_count', 'quotaId': 'GenerateContentInputTokensPerModelPerMinute-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.1-pro'}}, {'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.1-pro'}}, {'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.1-pro'}}, {'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_input_token_count', 'quotaId': 'GenerateContentInputTokensPerModelPerDay-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.1-pro'}}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '27s'}]}}
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/test_agent.py", line 14, in main
+    result = agent.invoke({"messages": [{"role": "user", "content": "hello"}]})
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/langgraph/pregel/main.py", line 3365, in invoke
+    for chunk in self.stream(
+                 ~~~~~~~~~~~^
+        input,
+        ^^^^^^
+    ...<10 lines>...
+        **kwargs,
+        ^^^^^^^^^
+    ):
+    ^
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/langgraph/pregel/main.py", line 2759, in stream
+    for _ in runner.tick(
+             ~~~~~~~~~~~^
+        [t for t in loop.tasks.values() if not t.writes],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        schedule_task=loop.accept_push,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ):
+    ^
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/langgraph/pregel/_runner.py", line 167, in tick
+    run_with_retry(
+    ~~~~~~~~~~~~~~^
+        t,
+        ^^
+    ...<10 lines>...
+        },
+        ^^
+    )
+    ^
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/langgraph/pregel/_retry.py", line 126, in run_with_retry
+    return task.proc.invoke(task.input, config)
+           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/langgraph/_internal/_runnable.py", line 656, in invoke
+    input = context.run(step.invoke, input, config, **kwargs)
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/langgraph/_internal/_runnable.py", line 400, in invoke
+    ret = self.func(*args, **kwargs)
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/langchain/agents/factory.py", line 1320, in model_node
+    result = wrap_model_call_handler(request, _execute_model_sync)
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/langchain/agents/factory.py", line 296, in composed
+    outer_result = outer(request, inner_handler)
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/langchain/agents/middleware/todo.py", line 244, in wrap_model_call
+    return handler(request.override(system_message=new_system_message))
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/langchain/agents/factory.py", line 286, in inner_handler
+    inner_result = inner(req, handler)
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/langchain/agents/factory.py", line 296, in composed
+    outer_result = outer(request, inner_handler)
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/deepagents/middleware/filesystem.py", line 1470, in wrap_model_call
+    return handler(request)
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/langchain/agents/factory.py", line 286, in inner_handler
+    inner_result = inner(req, handler)
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/langchain/agents/factory.py", line 296, in composed
+    outer_result = outer(request, inner_handler)
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/deepagents/middleware/subagents.py", line 612, in wrap_model_call
+    return handler(request.override(system_message=new_system_message))
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/langchain/agents/factory.py", line 286, in inner_handler
+    inner_result = inner(req, handler)
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/langchain/agents/factory.py", line 296, in composed
+    outer_result = outer(request, inner_handler)
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/deepagents/middleware/summarization.py", line 962, in wrap_model_call
+    return handler(request.override(messages=truncated_messages))
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/langchain/agents/factory.py", line 286, in inner_handler
+    inner_result = inner(req, handler)
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/langchain_anthropic/middleware/prompt_caching.py", line 165, in wrap_model_call
+    return handler(request)
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/langchain/agents/factory.py", line 1289, in _execute_model_sync
+    output = model_.invoke(messages)
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/langchain_core/runnables/base.py", line 5739, in invoke
+    return self.bound.invoke(
+           ~~~~~~~~~~~~~~~~~^
+        input,
+        ^^^^^^
+        self._merge_configs(config),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        **{**self.kwargs, **kwargs},
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/langchain_google_genai/chat_models.py", line 2559, in invoke
+    return super().invoke(input, config, stop=stop, **kwargs)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/langchain_core/language_models/chat_models.py", line 471, in invoke
+    self.generate_prompt(
+    ~~~~~~~~~~~~~~~~~~~~^
+        [self._convert_input(input)],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+        **kwargs,
+        ^^^^^^^^^
+    ).generations[0][0],
+    ^
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/langchain_core/language_models/chat_models.py", line 1749, in generate_prompt
+    return self.generate(prompt_messages, stop=stop, callbacks=callbacks, **kwargs)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/langchain_core/language_models/chat_models.py", line 1556, in generate
+    self._generate_with_cache(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        m,
+        ^^
+    ...<2 lines>...
+        **kwargs,
+        ^^^^^^^^^
+    )
+    ^
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/langchain_core/language_models/chat_models.py", line 1896, in _generate_with_cache
+    result = self._generate(
+        messages, stop=stop, run_manager=run_manager, **kwargs
+    )
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/langchain_google_genai/chat_models.py", line 3075, in _generate
+    _handle_client_error(e, request)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "/Users/harfi/Documents/Project/Capstone-jbnu/mayday-fix/Capstone/backend/.venv/lib/python3.14/site-packages/langchain_google_genai/chat_models.py", line 166, in _handle_client_error
+    raise ChatGoogleGenerativeAIError(msg) from e
+langchain_google_genai.chat_models.ChatGoogleGenerativeAIError: Error calling model 'gemini-3.1-pro-preview' (RESOURCE_EXHAUSTED): 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 0, model: gemini-3.1-pro\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-3.1-pro\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-3.1-pro\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 0, model: gemini-3.1-pro\nPlease retry in 27.022192347s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_input_token_count', 'quotaId': 'GenerateContentInputTokensPerModelPerMinute-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.1-pro'}}, {'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.1-pro'}}, {'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.1-pro'}}, {'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_input_token_count', 'quotaId': 'GenerateContentInputTokensPerModelPerDay-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.1-pro'}}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '27s'}]}}
+During task with name 'model' and id 'b7faa21c-c2f7-b9f7-e389-3ba6ad0b6019'
+Initializing agent...
+Agent initialized. Invoking...
