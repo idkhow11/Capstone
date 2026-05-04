@@ -23,16 +23,13 @@ interface Props {
   onBack: () => void
 }
 
-// ─── API 호출 (백엔드 연결 시 이 부분만 교체) ────────
+// ─── API 호출 (백엔드 연결) ────────
 const BASE_URL = 'http://localhost:8000'
 
 async function searchAPI(query: string): Promise<{
   recommendation: string
   products: Product[]
 }> {
-  // 백엔드 연결 전 mock 응답
-  // 실제 연결 시 아래 주석 해제하고 mock 부분 삭제
-  /*
   const res = await fetch(`${BASE_URL}/search`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -40,10 +37,6 @@ async function searchAPI(query: string): Promise<{
   })
   if (!res.ok) throw new Error('검색 실패')
   return res.json()
-  */
-
-  await new Promise(resolve => setTimeout(resolve, 1500))
-  return getMockResponse(query)
 }
 
 // ─── 컴포넌트 ─────────────────────────────────────────
@@ -287,71 +280,4 @@ export default function ResultChat({ query, onBack }: Props) {
       </div>
     </div>
   )
-}
-
-// ─── Mock 데이터 (백엔드 연결 시 삭제) ───────────────
-function getMockResponse(query: string): {
-  recommendation: string
-  products: Product[]
-} {
-
-  // 마우스
-  if (query.includes('마우스') || query.includes('무소음') || query.includes('무선')) {
-    return {
-      recommendation: `무선 무소음 마우스 5~10만원대로 찾아봤어요! 조용한 환경에서도 쾌적하게 사용할 수 있는 제품들이에요. 🖱️`,
-      products: [
-        {
-          name: '로지텍 MX Anywhere 3',
-          price: 79000,
-          url: 'https://prod.danawa.com/info/?pcode=12345678',
-          thumbnail: 'https://img.danawa.com/prod_img/500000/123/456/img/12345678_1.jpg',
-          reason: '무선 + 무소음 클릭 ✓ 배터리 최대 70일 — 이 가격대 최고 수준이에요.'
-        },
-        {
-          name: '앱코 AMG200 무선 무소음',
-          price: 58000,
-          url: 'https://prod.danawa.com/info/?pcode=87654321',
-          thumbnail: 'https://img.danawa.com/prod_img/500000/321/654/img/87654321_1.jpg',
-          reason: '무선 + 무소음 ✓ 가격 대비 성능 우수, 배터리 30일.'
-        }
-      ]
-    }
-  }
-
-  // 키보드
-  if (query.includes('키보드') || query.includes('기계식') || query.includes('게이밍')) {
-    return {
-      recommendation: `게이밍 키보드를 찾아봤어요! 타건감과 성능 모두 만족스러운 제품들이에요. ⌨️`,
-      products: [
-        {
-          name: '로지텍 G913 TKL 무선 기계식',
-          price: 189000,
-          url: 'https://prod.danawa.com/info/?pcode=11111111',
-          thumbnail: 'https://img.danawa.com/prod_img/500000/111/111/img/11111111_1.jpg',
-          reason: '무선 + 얇은 로우프로파일 ✓ 게이밍과 사무용 모두 적합해요.'
-        },
-        {
-          name: '앱코 K935P 유선 기계식',
-          price: 45000,
-          url: 'https://prod.danawa.com/info/?pcode=22222222',
-          thumbnail: 'https://img.danawa.com/prod_img/500000/222/222/img/22222222_1.jpg',
-          reason: '가성비 최고 ✓ 청축 타건감으로 게이밍에 최적화.'
-        }
-      ]
-    }
-  }
-
-  // 기본 응답
-  return {
-    recommendation: `"${query}"에 대한 결과를 찾았어요! 아래 상품들을 확인해보세요.`,
-    products: [
-      {
-        name: '검색 결과 예시',
-        price: 50000,
-        url: 'https://prod.danawa.com',
-        thumbnail: '',
-        reason: '조건에 맞는 상품이에요.'
-      }
-    ]
-  }
 }

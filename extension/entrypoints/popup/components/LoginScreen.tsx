@@ -84,23 +84,11 @@ export default function LoginScreen({ onLogin, onBack }: Props) {
         })
       })
 
-      // 구글 사용자 정보 조회
-      const googleRes = await fetch(
-        'https://www.googleapis.com/oauth2/v3/userinfo',
-        { headers: { Authorization: `Bearer ${token}` } }
-      )
-      const googleUser = await googleRes.json()
-
-      // 우리 서버에 구글 로그인
+      // 백엔드에서 토큰을 검증하고 사용자 정보를 가져옴
       const res = await fetch('http://localhost:8000/auth/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: googleUser.email,
-          name: googleUser.name,
-          google_id: googleUser.sub,
-          profile_image: googleUser.picture
-        })
+        body: JSON.stringify({ access_token: token })
       })
 
       const data = await res.json()
