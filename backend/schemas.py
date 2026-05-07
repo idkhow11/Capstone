@@ -30,7 +30,21 @@ class SearchRequest(BaseModel):
     query: str
     platform: str = "danawa"
     conversation_id: Optional[int] = None  # If continuing an existing conversation
-    user_id: Optional[int] = None  # If logged in
+
+class ProductResponse(BaseModel):
+    product_id: Optional[str] = None
+    name: str
+    brand: Optional[str] = None
+    price: Optional[int] = None
+    url: Optional[str] = None
+    thumbnail: Optional[str] = None
+    reason: Optional[str] = None
+    score: Optional[float] = None
+
+class SearchResponse(BaseModel):
+    products: list[ProductResponse]
+    recommendation: str
+    conversation_id: Optional[int] = None
 
 # ─── Chat Message Schemas ───────────────────────────
 class ChatMessageResponse(BaseModel):
