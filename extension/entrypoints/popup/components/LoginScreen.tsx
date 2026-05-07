@@ -5,7 +5,9 @@ interface Props {
     id: number
     name: string
     email: string
+    token: string
     profileImage?: string
+    profile_image?: string
   }) => void
   onBack: () => void
 }
@@ -75,11 +77,15 @@ export default function LoginScreen({ onLogin, onBack }: Props) {
     try {
       // Chrome Identity API로 구글 토큰 발급
       const token = await new Promise<string>((resolve, reject) => {
-        chrome.identity.getAuthToken({ interactive: true }, (token) => {
-          if (chrome.runtime.lastError || !token) {
+        chrome.identity.getAuthToken({ interactive: true }, (tokenResult) => {
+          const accessToken = typeof tokenResult === 'string'
+            ? tokenResult
+            : tokenResult?.token
+
+          if (chrome.runtime.lastError || !accessToken) {
             reject(chrome.runtime.lastError)
           } else {
-            resolve(token)
+            resolve(accessToken)
           }
         })
       })

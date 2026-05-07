@@ -1,18 +1,39 @@
 import { apiRequest } from './client'
 
+export interface ProductResponse {
+  product_id?: string | null
+  name: string
+  brand?: string | null
+  price?: number | null
+  url?: string | null
+  thumbnail?: string | null
+  reason?: string | null
+  score?: number | null
+}
+
+export interface SearchResponse {
+  products: ProductResponse[]
+  recommendation: string
+  conversation_id: number | null
+}
+
 export const searchApi = {
 
-  search: (query: string, platform: string) =>
-    apiRequest<{ products: any[]; recommendation: string }>(
+  search: (query: string, platform: string, conversationId?: number | null) =>
+    apiRequest<SearchResponse>(
       '/search',
       {
         method: 'POST',
-        body: JSON.stringify({ query, platform })
+        body: JSON.stringify({
+          query,
+          platform,
+          ...(conversationId ? { conversation_id: conversationId } : {})
+        })
       }
     ),
 
-  getHistory: (userId: number) =>
-    apiRequest<any[]>(`/history/${userId}`),
+  getHistory: () =>
+    apiRequest<any[]>('/history'),
 
   saveHistory: (userId: number, query: string, platform: string, result: any) =>
     apiRequest('/history', {

@@ -10,7 +10,9 @@ export async function apiRequest<T>(
 ): Promise<T> {
 
   // Chrome Storage에서 토큰 자동으로 가져옴
-  const storage = await chrome.storage.local.get(['user'])
+  const storage = await chrome.storage.local.get(['user']) as {
+    user?: { token?: string }
+  }
   const token = storage.user?.token
 
   const res = await fetch(`${BASE_URL}${endpoint}`, {

@@ -15,6 +15,7 @@ interface User {
   email: string
   token: string
   profileImage?: string
+  profile_image?: string
 }
 
 export default function App() {
@@ -28,15 +29,21 @@ export default function App() {
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
   const [user, setUser] = useState<User | null>(null)
 
+  const normalizeUser = (userData: User): User => ({
+    ...userData,
+    profileImage: userData.profileImage ?? userData.profile_image
+  })
+
   // 앱 시작 시 로컬 저장소 확인
   useEffect(() => {
     chrome.storage.local.get(['history', 'user'], (result) => {
       if (result.user) {
-        setUser(result.user)
-        fetchServerHistory(result.user)
+        const storedUser = normalizeUser(result.user as User)
+        setUser(storedUser)
+        fetchServerHistory(storedUser)
       } else {
         if (result.history) {
-          setHistory(result.history)
+          setHistory(result.history as SearchHistory[])
         }
       }
     })
@@ -46,7 +53,7 @@ export default function App() {
   const fetchServerHistory = async (userData: User) => {
     try {
       const res = await fetch(
-        `http://localhost:8000/history/${userData.id}`,
+        'http://localhost:8000/history',
         { headers: { Authorization: `Bearer ${userData.token}` } }
       )
       if (!res.ok) return
@@ -128,12 +135,13 @@ export default function App() {
   }
 
   const handleLogin = (userData: User) => {
-    setUser(userData)
+    const normalizedUser = normalizeUser(userData)
+    setUser(normalizedUser)
     setHistory([])
-    fetchServerHistory(userData)
+    fetchServerHistory(normalizedUser)
     setScreen('home')
     setSidebarOpen(false)
-    chrome.storage.local.set({ user: userData })
+    chrome.storage.local.set({ user: normalizedUser })
   }
 
   const handleLogout = () => {
@@ -146,7 +154,7 @@ export default function App() {
 
     // 로그아웃 후 로컬 히스토리 복원
     chrome.storage.local.get(['history'], (result) => {
-      if (result.history) setHistory(result.history)
+      if (result.history) setHistory(result.history as SearchHistory[])
     })
   }
 

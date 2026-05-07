@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { searchApi, type ProductResponse } from '../../api/search'
 
 /// <reference types="chrome"/>
 
@@ -6,15 +7,7 @@ import { useState, useEffect, useRef } from 'react'
 interface Message {
   role: 'user' | 'ai'
   content: string
-  products?: Product[]
-}
-
-interface Product {
-  name: string
-  price: number
-  url: string
-  thumbnail: string
-  reason: string
+  products?: ProductResponse[]
 }
 
 interface Props {
@@ -23,27 +16,12 @@ interface Props {
   onBack: () => void
 }
 
-// ─── API 호출 (백엔드 연결) ────────
-const BASE_URL = 'http://localhost:8000'
-
-async function searchAPI(query: string): Promise<{
-  recommendation: string
-  products: Product[]
-}> {
-  const res = await fetch(`${BASE_URL}/search`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query, platform: 'danawa' })
-  })
-  if (!res.ok) throw new Error('검색 실패')
-  return res.json()
-}
-
 // ─── 컴포넌트 ─────────────────────────────────────────
 export default function ResultChat({ query, onBack }: Props) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [conversationId, setConversationId] = useState<number | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const initialized = useRef(false)
 
@@ -61,7 +39,8 @@ export default function ResultChat({ query, onBack }: Props) {
   const fetchResult = async (q: string) => {
     setLoading(true)
     try {
-      const data = await searchAPI(q)
+      const data = await searchApi.search(q, 'danawa', conversationId)
+      setConversationId(data.conversation_id)
       setMessages(prev => [...prev, {
         role: 'ai',
         content: data.recommendation,
@@ -164,17 +143,19 @@ export default function ResultChat({ query, onBack }: Props) {
                 border: '1px solid #eee',
                 boxSizing: 'border-box'
               }}>
-                <img
-                  src={product.thumbnail}
-                  style={{
-                    width: '60px', height: '60px',
-                    borderRadius: '8px', objectFit: 'cover',
-                    background: '#eee', flexShrink: 0
-                  }}
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none'
-                  }}
-                />
+                {product.thumbnail && (
+                  <img
+                    src={product.thumbnail}
+                    style={{
+                      width: '60px', height: '60px',
+                      borderRadius: '8px', objectFit: 'cover',
+                      background: '#eee', flexShrink: 0
+                    }}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none'
+                    }}
+                  />
+                )}
                 <div style={{ flex: 1, overflow: 'hidden' }}>
                   <div style={{
                     fontSize: '13px', fontWeight: 'bold',
@@ -188,7 +169,9 @@ export default function ResultChat({ query, onBack }: Props) {
                     fontSize: '13px', fontWeight: 'bold',
                     color: '#0057ff'
                   }}>
-                    {product.price?.toLocaleString()}원
+                    {typeof product.price === 'number'
+                      ? `${product.price.toLocaleString()}원`
+                      : '가격 정보 없음'}
                   </div>
                   {product.reason && (
                     <div style={{
@@ -198,19 +181,23 @@ export default function ResultChat({ query, onBack }: Props) {
                     </div>
                   )}
                 </div>
-                <button
-                  onClick={() => chrome.tabs.create({ url: product.url })}
-                  style={{
-                    padding: '6px 10px',
-                    background: '#0057ff',
-                    border: 'none', borderRadius: '8px',
-                    color: 'white', fontSize: '11px',
-                    cursor: 'pointer', flexShrink: 0,
-                    alignSelf: 'center'
-                  }}
-                >
-                  구매
-                </button>
+                {product.url && (
+                  <button
+                    onClick={() => {
+                      if (product.url) chrome.tabs.create({ url: product.url })
+                    }}
+                    style={{
+                      padding: '6px 10px',
+                      background: '#0057ff',
+                      border: 'none', borderRadius: '8px',
+                      color: 'white', fontSize: '11px',
+                      cursor: 'pointer', flexShrink: 0,
+                      alignSelf: 'center'
+                    }}
+                  >
+                    구매
+                  </button>
+                )}
               </div>
             ))}
           </div>
