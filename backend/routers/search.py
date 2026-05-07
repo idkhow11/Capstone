@@ -9,30 +9,62 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from database import get_db
 import models
 import schemas
-from services.agent import get_agent
-from auth_utils import get_current_user
+from services.agent import run_shopping_agent
+from auth_utils import get_current_user, get_optional_current_user
 
 router = APIRouter(
     tags=["Search and History"]
 )
 
 # ─── Search (public — guests can search, auth optional) ────
-@router.post("/search")
-def perform_search(request: schemas.SearchRequest, db: Session = Depends(get_db)):
-    agent = get_agent()
-    
+@router.post("/search", response_model=schemas.SearchResponse)
+def perform_search(
+    request: schemas.SearchRequest,
+    current_user: dict | None = Depends(get_optional_current_user),
+    db: Session = Depends(get_db),
+):
     try:
-        # Call the DeepAgent
-        result = agent.invoke({"messages": [{"role": "user", "content": request.query}]})
-        final_message = result["messages"][-1].content
+        conversation_id = request.conversation_id if current_user else None
+        conversation_messages: list[dict[str, str]] = []
+
+        if current_user and conversation_id:
+            conversation = (
+                db.query(models.Conversation)
+                .filter(
+                    models.Conversation.id == conversation_id,
+                    models.Conversation.user_id == current_user["id"],
+                )
+                .first()
+            )
+            if not conversation:
+                raise HTTPException(status_code=404, detail="Conversation not found")
+
+            previous_messages = (
+                db.query(models.ChatMessage)
+                .filter(models.ChatMessage.conversation_id == conversation_id)
+                .order_by(models.ChatMessage.created_at.desc())
+                .limit(10)
+                .all()
+            )
+            conversation_messages = [
+                {"role": message.role, "content": message.content}
+                for message in reversed(previous_messages)
+            ]
+
+        # Call the LangGraph shopping agent
+        agent_result = run_shopping_agent(
+            request.query,
+            conversation_messages=conversation_messages,
+        )
+        final_message = agent_result.recommendation
         
-        # If user is logged in, save the conversation to Supabase
-        conversation_id = request.conversation_id
-        if request.user_id:
+        # If user is logged in, save the conversation to Supabase.
+        # Never trust user_id from the request body for ownership.
+        if current_user:
             if not conversation_id:
                 # Create a new conversation
                 conversation = models.Conversation(
-                    user_id=request.user_id,
+                    user_id=current_user["id"],
                     title=request.query[:100],  # First query becomes the title
                     platform=request.platform
                 )
@@ -59,10 +91,12 @@ def perform_search(request: schemas.SearchRequest, db: Session = Depends(get_db)
             db.commit()
         
         return {
-            "products": [],
+            "products": agent_result.products,
             "recommendation": final_message,
             "conversation_id": conversation_id
         }
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"Agent Error: {e}")
         raise HTTPException(status_code=500, detail="Error generating search results.")
