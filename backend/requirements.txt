@@ -9,6 +9,5 @@ passlib[bcrypt]
 python-multipart
 python-dotenv
 httpx
-deepagents
-tavily-python
+langgraph
 langchain-google-genai
