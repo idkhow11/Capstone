@@ -4,15 +4,15 @@ import os
 # Ensure the backend directory is in the path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from services.agent import get_agent
+from services.agent import run_shopping_agent
 
 def main():
     print("Initializing agent...")
-    agent = get_agent()
     print("Agent initialized. Invoking...")
     try:
-        result = agent.invoke({"messages": [{"role": "user", "content": "hello"}]})
-        print(result["messages"][-1].content)
+        result = run_shopping_agent("가성비 무선 마우스 추천")
+        print(result.recommendation)
+        print(result.products)
     except Exception as e:
         import traceback
         traceback.print_exc()
