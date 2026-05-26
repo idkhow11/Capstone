@@ -17,6 +17,17 @@ DANAWA_EMBEDDING_MODEL = os.getenv("DANAWA_EMBEDDING_MODEL", "models/gemini-embe
 DANAWA_EMBEDDING_DIM = int(os.getenv("DANAWA_EMBEDDING_DIM", "768"))
 DANAWA_PRODUCT_URL_TEMPLATE = "https://prod.danawa.com/info/?pcode={product_id}"
 
+# ── PATCH 추가 1: spec_filters 14키 화이트리스트 ──────────────────────────
+# map_language_to_specs(agent.py)가 내보내는 키와 정확히 일치해야 하며,
+# 이 목록 밖의 키는 SQL params로 흘러가면 안 되므로 병합 시 걸러낸다.
+ALLOWED_SPEC_KEYS = {
+    "connection_type", "is_gaming", "max_weight_g", "right_hand_only",
+    "left_hand_ok", "min_dpi", "min_polling_rate_hz", "min_battery_hours",
+    "is_silent", "has_rgb", "has_multi_pairing", "min_button_count",
+    "grip_query", "color_query",
+}
+# ──────────────────────────────────────────────────────────────────────────
+
 
 @lru_cache(maxsize=1)
 def _has_product_table() -> bool:
@@ -209,6 +220,29 @@ def _resolve_structured_filters(
     }
 
 
+# ── PATCH 추가 2: 룰 필터 위에 도구(spec_filters)를 덮어쓰는 병합 ──────────
+def _merge_spec_filters(
+    rule_filters: dict[str, Any],
+    spec_filters: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """룰 필터를 베이스로 두고, map_language_to_specs가 만든 spec_filters를
+    덮어쓴다. 정책: 합집합 + 충돌 시 spec_filters(도구) 우선.
+
+    - 도구가 None이 아닌 값을 준 키만 덮어쓴다(None은 '의견 없음'으로 간주).
+    - 화이트리스트 밖 키는 무시한다(SQL 안전성).
+    """
+    merged = dict(rule_filters)
+    if not spec_filters:
+        return merged
+    for key, value in spec_filters.items():
+        if key not in ALLOWED_SPEC_KEYS:
+            continue
+        if value is not None:
+            merged[key] = value
+    return merged
+# ──────────────────────────────────────────────────────────────────────────
+
+
 def _extract_keyword_tokens(*values: str | None) -> list[str]:
     stopwords = {
         "추천",
@@ -241,6 +275,7 @@ def search_danawa_products(
     constraints: list[str] | None = None,
     ranking_priorities: list[str] | None = None,
     limit: int = DANAWA_RAG_LIMIT,
+    spec_filters: dict[str, Any] | None = None,   # ── PATCH 시그니처 추가 ──
 ) -> list[dict[str, Any]]:
     vector_literal = _embed_query(query)
     search_terms = " ".join(
@@ -254,7 +289,10 @@ def search_danawa_products(
         " ".join(constraints or []),
         " ".join(ranking_priorities or []),
     )
-    filters = _resolve_structured_filters(query, constraints, ranking_priorities)
+    # ── PATCH: 룰 필터 산출 후 spec_filters 병합 (이 두 줄이 변경의 전부) ──
+    rule_filters = _resolve_structured_filters(query, constraints, ranking_priorities)
+    filters = _merge_spec_filters(rule_filters, spec_filters)
+    # ──────────────────────────────────────────────────────────────────────
 
     params = {
         "query": search_terms,
