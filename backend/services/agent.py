@@ -33,7 +33,7 @@ from langchain_core.messages import (
     ToolMessage,
 )
 from langchain_core.tools import tool
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
@@ -81,16 +81,24 @@ class AgentResult:
 _llm = None
 
 
-def _get_llm() -> ChatGoogleGenerativeAI | None:
+def _get_llm() -> ChatOpenAI | None:
     global _llm
     if _llm is not None:
         return _llm
-    api_key = os.getenv("GOOGLE_API_KEY", "")
-    if not api_key or api_key == "your_google_api_key":
+    # 전북대 멀티 LLM 게이트웨이(OpenAI 호환)를 통해 호출한다.
+    # 키는 GATEWAY_API_KEY 우선, 없으면 기존 GOOGLE_API_KEY도 허용(하위 호환).
+    api_key = os.getenv("GATEWAY_API_KEY") or os.getenv("GOOGLE_API_KEY", "")
+    if not api_key or api_key in ("your_google_api_key", "your_gateway_api_key"):
         return None
-    model_name = os.getenv("SHOPPING_AGENT_MODEL", "gemini-2.0-flash")
-    _llm = ChatGoogleGenerativeAI(
+    base_url = os.getenv(
+        "GATEWAY_BASE_URL",
+        "https://factchat-cloud.mindlogic.ai/v1/gateway",
+    )
+    model_name = os.getenv("SHOPPING_AGENT_MODEL", "gemini-2.5-flash")
+    _llm = ChatOpenAI(
         model=model_name,
+        api_key=api_key,
+        base_url=base_url,
         temperature=0.2,
         max_retries=1,
         timeout=30,
@@ -201,8 +209,67 @@ def _llm_based_map(phrase: str) -> dict[str, Any]:
     return _validate_specs(parsed)
 
 
+def _normalize_spec_aliases(specs: dict[str, Any]) -> dict[str, Any]:
+    """LLM이 직접 만든 spec_filters의 흔한 형식 변형을 표준 형식으로 흡수한다.
+
+    LLM이 map_language_to_specs를 거치지 않고 search_products의 spec_filters를
+    직접 만들면, 영어 값('wireless')·키 별칭('weight_g')·중첩 형식({'max':70})을
+    쓰는 경우가 있다. 이를 우리 14키 표준 형식으로 되돌린다.
+    """
+    if not isinstance(specs, dict):
+        return {}
+
+    # 1) 키 별칭 → 표준 키
+    key_aliases = {
+        "weight_g": "max_weight_g",
+        "weight": "max_weight_g",
+        "max_weight": "max_weight_g",
+        "dpi": "min_dpi",
+        "max_dpi": "min_dpi",
+        "polling_rate": "min_polling_rate_hz",
+        "polling_rate_hz": "min_polling_rate_hz",
+        "battery_hours": "min_battery_hours",
+        "battery": "min_battery_hours",
+        "button_count": "min_button_count",
+        "buttons": "min_button_count",
+        "connectivity": "connection_type",
+        "connection": "connection_type",
+        "grip": "grip_query",
+        "grip_type": "grip_query",
+        "color": "color_query",
+    }
+    # 2) 값 별칭 (영어 → 한글)
+    conn_value_aliases = {
+        "wireless": "무선", "bluetooth": "무선", "wired": "유선",
+    }
+
+    out: dict[str, Any] = {}
+    for raw_key, raw_value in specs.items():
+        key = key_aliases.get(raw_key, raw_key)
+        value = raw_value
+
+        # 중첩 형식 {'max': 70} / {'min': 16000} / {'value': ...} 평탄화
+        if isinstance(value, dict):
+            for nk in ("max", "min", "value", "<=", ">="):
+                if nk in value:
+                    value = value[nk]
+                    break
+
+        # connection_type 영어값 → 한글
+        if key == "connection_type" and isinstance(value, str):
+            value = conn_value_aliases.get(value.lower(), value)
+
+        out[key] = value
+
+    return out
+
+
 def _validate_specs(specs: dict[str, Any]) -> dict[str, Any]:
-    """14키 화이트리스트 + 값 타입/도메인 검증. SQL 안전성의 마지막 방어선."""
+    """14키 화이트리스트 + 값 타입/도메인 검증. SQL 안전성의 마지막 방어선.
+
+    검증 전에 _normalize_spec_aliases로 LLM의 형식 변형을 먼저 흡수한다.
+    """
+    specs = _normalize_spec_aliases(specs)
     clean: dict[str, Any] = {}
     for key, value in specs.items():
         if key not in ALLOWED_SPEC_KEYS or value is None:
@@ -256,10 +323,13 @@ def search_products(
     ask_clarifying_question을 사용하라. 자연어 조건이 있으면 먼저
     map_language_to_specs로 변환한 결과를 spec_filters에 넣어라.
     """
+    # 방어선: spec_filters를 직접 만들었더라도(영어값/중첩/키별칭 등)
+    # 표준 14키 형식으로 정규화·검증한 뒤 검색에 넘긴다.
+    normalized = _validate_specs(spec_filters) if spec_filters else None
     products = search_danawa_products(
         query=query,
         budget_krw=budget_krw,
-        spec_filters=spec_filters or None,
+        spec_filters=normalized or None,
     )
     return products[:5]
 
@@ -311,6 +381,9 @@ SYSTEM_PROMPT = """당신은 다나와 기반 PC 마우스 쇼핑 어시스턴�
 1. 사용자 요구가 모호하면(용도·예산·선호 전무) ask_clarifying_question으로 되물으세요.
 2. "손목 아픔", "조용한" 같은 자연어 조건은 map_language_to_specs로 정량 스펙으로 바꾸세요.
 3. 조건이 충분하면 search_products로 검색하세요. 변환한 스펙은 spec_filters에 넣으세요.
+   spec_filters는 직접 지어내지 말고, 가능하면 map_language_to_specs가 반환한 값을
+   그대로 사용하세요. (키는 max_weight_g, min_dpi, connection_type='무선'/'유선' 등
+   정해진 형식만 쓰며, 중첩 객체나 영어 값은 쓰지 마세요.)
 4. 검색 결과만 근거로 추천하세요. DB에 없는 제품을 지어내지 마세요.
 5. 조건에 맞는 제품이 없으면 솔직히 없다고 말하세요(정직한 거절이 거짓 추천보다 낫습니다).
 6. 도구는 꼭 필요할 때만 호출하고, 충분한 정보를 얻으면 최종 추천을 작성하세요.

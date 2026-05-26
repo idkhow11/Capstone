@@ -11,3 +11,4 @@ python-dotenv
 httpx
 langgraph
 langchain-google-genai
+langchain-openai
