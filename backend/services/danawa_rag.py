@@ -17,7 +17,17 @@ DANAWA_EMBEDDING_MODEL = os.getenv("DANAWA_EMBEDDING_MODEL", "models/gemini-embe
 DANAWA_EMBEDDING_DIM = int(os.getenv("DANAWA_EMBEDDING_DIM", "768"))
 DANAWA_PRODUCT_URL_TEMPLATE = "https://prod.danawa.com/info/?pcode={product_id}"
 
-# ── PATCH 추가 1: spec_filters 14키 화이트리스트 ──────────────────────────
+# ── PATCH 추가 3: 크기 분위수 (절대 mm 미사용, 분포 기준 상대 컷) ──────────
+# "큰" = height 상위 25%, "작은" = 하위 25%. 컷오프 mm를 코드에 박지 않고
+# 쿼리 시점에 danawa_products 분포에서 계산 → 재크롤링해도 자동 추종.
+# height 기준: length는 분포가 좁아(110~128mm 밀집) 변별력이 약하고,
+# height는 게이밍(납작)/버티컬·에르고(두꺼움)를 잘 가른다. "손에 꽉 차는 큰"은
+# 높이(두께)가 핵심 신호이므로 height로 판정한다.
+SIZE_LARGE_QUANTILE = float(os.getenv("SIZE_LARGE_QUANTILE", "0.75"))
+SIZE_SMALL_QUANTILE = float(os.getenv("SIZE_SMALL_QUANTILE", "0.25"))
+# ──────────────────────────────────────────────────────────────────────────
+
+# ── PATCH 추가 1: spec_filters 화이트리스트 ────────────────────────────────
 # map_language_to_specs(agent.py)가 내보내는 키와 정확히 일치해야 하며,
 # 이 목록 밖의 키는 SQL params로 흘러가면 안 되므로 병합 시 걸러낸다.
 ALLOWED_SPEC_KEYS = {
@@ -25,6 +35,7 @@ ALLOWED_SPEC_KEYS = {
     "left_hand_ok", "min_dpi", "min_polling_rate_hz", "min_battery_hours",
     "is_silent", "has_rgb", "has_multi_pairing", "min_button_count",
     "grip_query", "color_query",
+    "size_pref",   # ── PATCH: 크기 상대 디스크립터 'large'|'small' ──
 }
 # ──────────────────────────────────────────────────────────────────────────
 
@@ -102,6 +113,12 @@ def _build_reason(row: dict[str, Any]) -> str:
         reasons.append(f"최대 {row['max_dpi']}DPI")
     if row.get("weight_g") is not None:
         reasons.append(f"{float(row['weight_g']):.1f}g")
+    # ── PATCH 추가 7: 크기를 효과 언어 설명에 노출 (큰/작은 추천 근거) ──
+    # height를 크기 판정 기준으로 쓰므로 높이를 우선 노출하고, 길이도 보조로 함께.
+    if row.get("height_mm") is not None:
+        reasons.append(f"높이 {float(row['height_mm']):.0f}mm")
+    if row.get("length_mm") is not None:
+        reasons.append(f"길이 {float(row['length_mm']):.0f}mm")
     if row.get("polling_rate_hz") is not None:
         reasons.append(f"{row['polling_rate_hz']}Hz")
     if row.get("max_polling_rate") is not None and row.get("max_polling_rate") != row.get("polling_rate_hz"):
@@ -202,6 +219,13 @@ def _resolve_structured_filters(
     elif "유선" in terms:
         connection_type = "유선"
 
+    # ── PATCH 추가 3: 룰 레벨 크기 디스크립터 (명시적 표현만 결정적 처리) ──
+    size_pref = None
+    if any(k in terms for k in ("큰", "커다", "대형", "큼직", "손에 꽉")):
+        size_pref = "large"
+    elif any(k in terms for k in ("작은", "소형", "미니", "콤팩트", "작고")):
+        size_pref = "small"
+
     return {
         "connection_type": connection_type,
         "is_gaming": "게이밍" in terms or "게임" in terms or "fps" in terms,
@@ -210,13 +234,20 @@ def _resolve_structured_filters(
         "left_hand_ok": True if "왼손" in terms or "양손" in terms else None,
         "min_dpi": 16000 if "dpi" in terms or "고감도" in terms else None,
         "min_polling_rate_hz": 1000 if "폴링" in terms or "hz" in terms or "fps" in terms else None,
-        "min_battery_hours": 80 if "배터리" in terms or "오래" in terms else None,
+        "min_battery_hours": 80 if "배터리" in terms else None,
         "is_silent": True if "무소음" in terms or "저소음" in terms or "조용" in terms else None,
         "has_rgb": True if "rgb" in terms or "조명" in terms or "led" in terms else None,
         "has_multi_pairing": True if "멀티페어링" in terms or "멀티 페어링" in terms else None,
         "min_button_count": 6 if "버튼" in terms or "매크로" in terms else None,
-        "grip_query": "팜" if "팜그립" in terms or "팜 그립" in terms else None,
+        "grip_query": (
+            "에르고" if any(k in terms for k in (
+                "팔목", "손목", "인체공학", "에르고", "버티컬", "수직",
+                "어깨", "거북목", "장시간", "오래 써도", "오래 쓰", "자세",
+            ))
+            else ("팜" if "팜그립" in terms or "팜 그립" in terms else None)
+        ),
         "color_query": "블랙" if "블랙" in terms or "검정" in terms else ("화이트" if "화이트" in terms or "흰색" in terms else None),
+        "size_pref": size_pref,
     }
 
 
@@ -289,9 +320,17 @@ def search_danawa_products(
         " ".join(constraints or []),
         " ".join(ranking_priorities or []),
     )
-    # ── PATCH: 룰 필터 산출 후 spec_filters 병합 (이 두 줄이 변경의 전부) ──
+    # ── PATCH: 룰 필터 산출 후 spec_filters 병합 ──
     rule_filters = _resolve_structured_filters(query, constraints, ranking_priorities)
     filters = _merge_spec_filters(rule_filters, spec_filters)
+    # ── PATCH 방어선: "오래/장시간"을 LLM이 배터리로 오해하는 것 차단 ──
+    # min_battery_hours는 사용자가 "배터리"를 명시했을 때만 유효. 그 외에는
+    # LLM이 넣었더라도 무시한다("오래 써도 편한" = 인체공학이지 배터리가 아님).
+    _battery_terms = " ".join([
+        query or "", " ".join(constraints or []), " ".join(ranking_priorities or []),
+    ]).lower()
+    if "배터리" not in _battery_terms and "충전" not in _battery_terms:
+        filters["min_battery_hours"] = None
     # ──────────────────────────────────────────────────────────────────────
 
     params = {
@@ -313,6 +352,10 @@ def search_danawa_products(
         "min_button_count": filters["min_button_count"],
         "grip_pattern": f"%{filters['grip_query']}%" if filters["grip_query"] else None,
         "color_pattern": f"%{filters['color_query']}%" if filters["color_query"] else None,
+        # ── PATCH 추가 4: 크기 선호 + 분위수 파라미터 ──
+        "size_pref": filters["size_pref"],
+        "size_large_q": SIZE_LARGE_QUANTILE,
+        "size_small_q": SIZE_SMALL_QUANTILE,
         "candidate_limit": max(limit * 8, 40),
     }
 
@@ -338,6 +381,8 @@ def search_danawa_products(
             max_polling_rate as polling_rate_hz,
             max_polling_rate,
             weight_g,
+            length_mm,
+            height_mm,
             is_gaming,
             case
                 when hand_orientation like '%오른손%' then true
@@ -408,8 +453,21 @@ def search_danawa_products(
           and (:has_rgb is null or has_rgb = :has_rgb)
           and (:has_multi_pairing is null or has_multi_pairing = :has_multi_pairing)
           and (:min_button_count is null or button_count >= :min_button_count)
-          and (:grip_pattern is null or grip_type ilike :grip_pattern)
+          and (:grip_pattern is null or grip_type ilike :grip_pattern or housing_design ilike :grip_pattern)
           and (:color_pattern is null or color ilike :color_pattern or product_name ilike :color_pattern)
+          -- ── PATCH 추가 6: 크기 분위수 필터 (height 기준, 절대 mm 미사용) ──
+          -- length는 분포가 좁아(대부분 110~128mm) 변별력이 약했다. height는
+          -- 게이밍(납작, ~40mm)과 버티컬·에르고(두꺼움, 60mm+)를 잘 가르므로
+          -- "손에 꽉 차는 큰" 판정에 더 적합하다. NULL height는 large/small에서
+          -- 자동 제외(모르는 크기를 크다/작다고 추천하지 않음 — 올바른 동작).
+          and (:size_pref is null or :size_pref <> 'large'
+               or (height_mm is not null and height_mm >= (
+                   select percentile_cont(:size_large_q) within group (order by height_mm)
+                   from danawa_products where height_mm is not null)))
+          and (:size_pref is null or :size_pref <> 'small'
+               or (height_mm is not null and height_mm <= (
+                   select percentile_cont(:size_small_q) within group (order by height_mm)
+                   from danawa_products where height_mm is not null)))
         order by score desc, price asc nulls last
         limit :candidate_limit
         """
@@ -538,3 +596,67 @@ def search_danawa_products(
         return []
 
     return _rows_to_products(rows, limit)
+
+
+# ── PATCH 추가 8: 비교 에이전트용 — product_id로 실제 스펙 직접 조회 ────────
+def get_product_details(product_ids: list[str]) -> list[dict[str, Any]]:
+    """product_id 목록으로 danawa_products에서 비교용 스펙을 그대로 조회한다.
+
+    비교 에이전트(compare/prioritize 도구)가 '기억/추측'이 아니라 DB의 실제 값을
+    근거로 비교하도록 보장하는 진입점. 검색 RAG와 달리 스코어링 없이 raw fetch.
+    """
+    if not product_ids:
+        return []
+    ids = [str(pid) for pid in product_ids if str(pid).strip()]
+    if not ids:
+        return []
+
+    statement = text(
+        """
+        select
+            product_id,
+            product_name,
+            brand,
+            price,
+            avg_rating,
+            total_reviews,
+            connectivity,
+            sensor_model,
+            max_dpi,
+            max_polling_rate,
+            weight_g,
+            length_mm,
+            height_mm,
+            battery_max_hours,
+            button_count,
+            is_gaming,
+            is_silent,
+            has_rgb,
+            has_multi_pairing,
+            grip_type,
+            hand_orientation,
+            housing_design,
+            key_pros,
+            key_cons,
+            color,
+            url,
+            thumbnail
+        from danawa_products
+        where product_id::text = any(cast(:ids as text[]))
+        """
+    )
+    try:
+        with engine.connect() as connection:
+            rows = [dict(row._mapping) for row in connection.execute(statement, {"ids": ids})]
+    except SQLAlchemyError as exc:
+        print(f"get_product_details unavailable: {exc}")
+        return []
+
+    # 요청한 id 순서를 보존
+    by_id = {str(r["product_id"]): r for r in rows}
+    ordered = [by_id[i] for i in ids if i in by_id]
+    for r in ordered:
+        r["product_id"] = str(r["product_id"])
+        r["url"] = _resolve_product_url(r["product_id"], r.get("url"))
+    return ordered
+# ──────────────────────────────────────────────────────────────────────────
