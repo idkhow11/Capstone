@@ -27,6 +27,18 @@
 import json
 import os
 import re
+from decimal import Decimal
+
+
+def _json_default(o):
+    """DB에서 온 Decimal(numeric) 등 json.dumps가 모르는 타입을 안전 변환.
+
+    비교 도구(compare_products/get_product_details)가 DB raw 값(price 등 Decimal)을
+    그대로 반환할 때 ToolMessage 직렬화에서 터지는 것을 방지한다.
+    """
+    if isinstance(o, Decimal):
+        return float(o)
+    return str(o)
 from dataclasses import dataclass, field
 from typing import Annotated, Any, TypedDict
 
@@ -630,7 +642,7 @@ def tools_node(state: ReactAgentState) -> dict[str, Any]:
 
         tool_messages.append(
             ToolMessage(
-                content=json.dumps(result, ensure_ascii=False),
+                content=json.dumps(result, ensure_ascii=False, default=_json_default),
                 tool_call_id=call["id"],
             )
         )

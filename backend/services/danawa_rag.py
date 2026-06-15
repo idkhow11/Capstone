@@ -1,5 +1,6 @@
 import os
 import re
+from decimal import Decimal
 from functools import lru_cache
 from typing import Any
 
@@ -175,7 +176,7 @@ def _rows_to_products(rows: list[dict[str, Any]], limit: int) -> list[dict[str, 
                 "product_id": product_id,
                 "name": row.get("product_name") or "상품명 미상",
                 "brand": row.get("brand") or "",
-                "price": row.get("price"),
+                "price": int(row["price"]) if row.get("price") is not None else None,
                 "url": _resolve_product_url(product_id, row.get("url")),
                 "thumbnail": row.get("thumbnail") or "",
                 "reason": _build_reason(row),
@@ -658,5 +659,10 @@ def get_product_details(product_ids: list[str]) -> list[dict[str, Any]]:
     for r in ordered:
         r["product_id"] = str(r["product_id"])
         r["url"] = _resolve_product_url(r["product_id"], r.get("url"))
+        # DB raw 값의 Decimal(numeric)을 JSON 직렬화 가능한 숫자로 변환.
+        # 비교 도구가 이 dict를 그대로 ToolMessage/응답으로 내보내므로 필수.
+        for key, value in list(r.items()):
+            if isinstance(value, Decimal):
+                r[key] = int(value) if value == value.to_integral_value() else float(value)
     return ordered
 # ──────────────────────────────────────────────────────────────────────────
