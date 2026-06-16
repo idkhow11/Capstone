@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { BASE_URL } from '../../api/client'
 
 interface Props {
   onLogin: (user: {
@@ -36,8 +37,8 @@ export default function LoginScreen({ onLogin, onBack }: Props) {
 
     try {
       const endpoint = mode === 'login'
-        ? 'http://localhost:8000/auth/login'
-        : 'http://localhost:8000/auth/register'
+        ? `${BASE_URL}/auth/login`
+        : `${BASE_URL}/auth/register`
 
       const res = await fetch(endpoint, {
         method: 'POST',
@@ -91,7 +92,7 @@ export default function LoginScreen({ onLogin, onBack }: Props) {
       })
 
       // 백엔드에서 토큰을 검증하고 사용자 정보를 가져옴
-      const res = await fetch('http://localhost:8000/auth/google', {
+      const res = await fetch(`${BASE_URL}/auth/google`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ access_token: token })

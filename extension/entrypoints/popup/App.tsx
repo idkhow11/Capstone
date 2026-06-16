@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import SearchHome from './components/SearchHome'
 import ResultChat from './components/ResultChat'
 import LoginScreen from './components/LoginScreen'
+import { BASE_URL } from '../api/client'
 
 interface SearchHistory {
   id: number
@@ -53,7 +54,7 @@ export default function App() {
   const fetchServerHistory = async (userData: User) => {
     try {
       const res = await fetch(
-        'http://localhost:8000/history',
+        `${BASE_URL}/history`,
         { headers: { Authorization: `Bearer ${userData.token}` } }
       )
       if (!res.ok) return
@@ -83,7 +84,7 @@ export default function App() {
     setSidebarOpen(false)
 
     if (user) {
-      fetch('http://localhost:8000/history', {
+      fetch(`${BASE_URL}/history`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -120,7 +121,7 @@ export default function App() {
     setHistory(newHistory)
 
     if (user) {
-      fetch(`http://localhost:8000/history/${id}`, {
+      fetch(`${BASE_URL}/history/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${user.token}` }
       }).catch(console.error)

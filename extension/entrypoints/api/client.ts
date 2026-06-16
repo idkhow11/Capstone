@@ -1,8 +1,8 @@
-// 기본 설정 한 곳에서 관리
-const BASE_URL = 'http://localhost:8000'
+// 기본 설정 한 곳에서 관리 — URL은 이제 여기 한 곳만 바꾸면 됨
+export const BASE_URL = 'https://capstone-production-86c4.up.railway.app'
 
-// 나중에 배포 시 여기만 바꾸면 됨
-// const BASE_URL = 'https://our-server.com'
+// 로컬 백엔드로 테스트할 땐 위를 주석 처리하고 아래를 사용
+// export const BASE_URL = 'http://localhost:8000'
 
 export async function apiRequest<T>(
   endpoint: string,

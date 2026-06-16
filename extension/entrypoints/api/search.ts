@@ -17,9 +17,20 @@ export interface SearchResponse {
   conversation_id: number | null
 }
 
+// 멀티턴: 이전 대화 한 턴 ({role, content})
+export interface ChatMessage {
+  role: string      // 'user' | 'ai'
+  content: string
+}
+
 export const searchApi = {
 
-  search: (query: string, platform: string, conversationId?: number | null) =>
+  search: (
+    query: string,
+    platform: string,
+    conversationId?: number | null,
+    messages?: ChatMessage[]            // 이전 대화 이력 (게스트 멀티턴)
+  ) =>
     apiRequest<SearchResponse>(
       '/search',
       {
@@ -27,7 +38,8 @@ export const searchApi = {
         body: JSON.stringify({
           query,
           platform,
-          ...(conversationId ? { conversation_id: conversationId } : {})
+          ...(conversationId ? { conversation_id: conversationId } : {}),
+          ...(messages && messages.length ? { messages } : {})
         })
       }
     ),

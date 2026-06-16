@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { searchApi, type ProductResponse } from '../../api/search'
+import remarkCjkFriendly from 'remark-cjk-friendly'
 
 /// <reference types="chrome"/>
 
@@ -29,17 +32,24 @@ export default function ResultChat({ query, onBack }: Props) {
     if (initialized.current) return
     initialized.current = true
     setMessages([{ role: 'user', content: query }])
-    fetchResult(query)
+    fetchResult(query, [])   // 첫 검색: 이전 대화 없음
   }, [])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const fetchResult = async (q: string) => {
+  // history = 현재 질문 이전까지의 대화 (멀티턴 맥락으로 백엔드에 전달)
+  const fetchResult = async (q: string, history: Message[]) => {
     setLoading(true)
     try {
-      const data = await searchApi.search(q, 'danawa', conversationId)
+      // products 등 부가 필드를 떼고 {role, content}만 전송
+      const priorMessages = history.map(m => ({
+        role: m.role,
+        content: m.content
+      }))
+
+      const data = await searchApi.search(q, 'danawa', conversationId, priorMessages)
       setConversationId(data.conversation_id)
       setMessages(prev => [...prev, {
         role: 'ai',
@@ -60,8 +70,11 @@ export default function ResultChat({ query, onBack }: Props) {
     if (!input.trim() || loading) return
     const q = input
     setInput('')
+    // 방금 입력(q)을 추가하기 전까지의 messages = "이전 대화"
+    // 이 시점의 messages는 이전 응답까지 확정된 상태라 안전하게 캡처됨
+    const priorHistory = messages
     setMessages(prev => [...prev, { role: 'user', content: q }])
-    fetchResult(q)
+    fetchResult(q, priorHistory)   // q는 query로, 나머지는 이전 대화로 전달
   }
 
   return (
@@ -73,6 +86,36 @@ export default function ResultChat({ query, onBack }: Props) {
       color: '#111',
       fontFamily: 'sans-serif'
     }}>
+
+      {/* 마크다운 렌더 스타일 (한 번만 주입) */}
+      <style>{`
+        .modumoa-md { font-size: 13px; line-height: 1.55; color: #111; }
+        .modumoa-md > *:first-child { margin-top: 0; }
+        .modumoa-md > *:last-child { margin-bottom: 0; }
+        .modumoa-md p { margin: 0 0 8px; }
+        .modumoa-md ul, .modumoa-md ol { margin: 0 0 8px; padding-left: 18px; }
+        .modumoa-md li { margin: 2px 0; }
+        .modumoa-md strong { font-weight: 700; }
+        .modumoa-md h1, .modumoa-md h2, .modumoa-md h3 { font-size: 14px; margin: 10px 0 4px; }
+        .modumoa-md a { color: #0057ff; text-decoration: none; }
+        .modumoa-md code { background: #ececec; padding: 1px 4px; border-radius: 4px; font-size: 12px; }
+        /* 비교표 — 좁은 패널에서 가로 스크롤 */
+        .modumoa-md table {
+          border-collapse: collapse;
+          margin: 8px 0;
+          font-size: 12px;
+          display: block;
+          overflow-x: auto;
+          max-width: 100%;
+        }
+        .modumoa-md th, .modumoa-md td {
+          border: 1px solid #ddd;
+          padding: 6px 8px;
+          text-align: left;
+          white-space: nowrap;
+        }
+        .modumoa-md th { background: #f0f0f0; font-weight: 700; }
+      `}</style>
 
       {/* 헤더 */}
       <div style={{
@@ -115,20 +158,36 @@ export default function ResultChat({ query, onBack }: Props) {
           }}>
 
             {/* 말풍선 */}
-            <div style={{
-              maxWidth: '80%',
-              padding: '10px 14px',
-              borderRadius: msg.role === 'user'
-                ? '18px 18px 4px 18px'
-                : '18px 18px 18px 4px',
-              background: msg.role === 'user' ? '#111' : '#f5f5f5',
-              color: msg.role === 'user' ? '#fff' : '#111',
-              fontSize: '13px',
-              lineHeight: '1.5',
-              whiteSpace: 'pre-wrap'
-            }}>
-              {msg.content}
-            </div>
+            {msg.role === 'user' ? (
+              <div style={{
+                maxWidth: '80%',
+                padding: '10px 14px',
+                borderRadius: '18px 18px 4px 18px',
+                background: '#111',
+                color: '#fff',
+                fontSize: '13px',
+                lineHeight: '1.5',
+                whiteSpace: 'pre-wrap'
+              }}>
+                {msg.content}
+              </div>
+            ) : (
+              <div
+                className="modumoa-md"
+                style={{
+                  maxWidth: '100%',
+                  padding: '10px 14px',
+                  borderRadius: '18px 18px 18px 4px',
+                  background: '#f5f5f5',
+                  color: '#111',
+                  boxSizing: 'border-box'
+                }}
+              >
+                <ReactMarkdown remarkPlugins={[remarkGfm, remarkCjkFriendly]}>
+                  {msg.content}
+                </ReactMarkdown>
+              </div>
+            )}
 
             {/* 상품 카드 */}
             {msg.products && msg.products.map((product, j) => (
