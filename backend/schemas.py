@@ -26,10 +26,16 @@ class UserResponse(UserBase):
         from_attributes = True
 
 # ─── Search Schemas ─────────────────────────────────
+class ChatMessage(BaseModel):
+    """클라이언트가 직접 보내는 대화 이력 한 턴 (게스트 멀티턴용)."""
+    role: str          # "user" 또는 "ai"
+    content: str
+
 class SearchRequest(BaseModel):
     query: str
     platform: str = "danawa"
     conversation_id: Optional[int] = None  # If continuing an existing conversation
+    messages: Optional[list[ChatMessage]] = None  # 클라이언트가 보내는 이전 대화 이력(게스트 멀티턴)
 
 class ProductResponse(BaseModel):
     product_id: Optional[str] = None

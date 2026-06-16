@@ -27,6 +27,7 @@ def perform_search(
         conversation_id = request.conversation_id if current_user else None
         conversation_messages: list[dict[str, str]] = []
 
+        # (1) 로그인 사용자 + 기존 대화: DB에서 이전 메시지 불러오기
         if current_user and conversation_id:
             conversation = (
                 db.query(models.Conversation)
@@ -51,13 +52,22 @@ def perform_search(
                 for message in reversed(previous_messages)
             ]
 
+        # (2) 게스트(또는 DB 이력이 없을 때): 클라이언트가 직접 보낸 이력 사용
+        #     익스텐션이 이전 대화를 request.messages로 실어 보내면 멀티턴이 작동한다.
+        #     DB 이력이 이미 채워졌으면 건드리지 않는다(중복 방지).
+        if not conversation_messages and request.messages:
+            conversation_messages = [
+                {"role": m.role, "content": m.content}
+                for m in request.messages
+            ]
+
         # Call the LangGraph shopping agent
         agent_result = run_shopping_agent(
             request.query,
             conversation_messages=conversation_messages,
         )
         final_message = agent_result.recommendation
-        
+
         # If user is logged in, save the conversation to Supabase.
         # Never trust user_id from the request body for ownership.
         if current_user:
@@ -72,7 +82,7 @@ def perform_search(
                 db.commit()
                 db.refresh(conversation)
                 conversation_id = conversation.id
-            
+
             # Save the user message
             user_msg = models.ChatMessage(
                 conversation_id=conversation_id,
@@ -80,7 +90,7 @@ def perform_search(
                 content=request.query
             )
             db.add(user_msg)
-            
+
             # Save the AI response
             ai_msg = models.ChatMessage(
                 conversation_id=conversation_id,
@@ -89,7 +99,7 @@ def perform_search(
             )
             db.add(ai_msg)
             db.commit()
-        
+
         return {
             "products": agent_result.products,
             "recommendation": final_message,
@@ -152,7 +162,7 @@ def delete_conversation(
     )
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
-    
+
     db.delete(conversation)  # cascade deletes messages too
     db.commit()
     return {"message": "Deleted successfully"}
@@ -207,7 +217,7 @@ def delete_history(
     )
     if not item:
         raise HTTPException(status_code=404, detail="History not found")
-    
+
     db.delete(item)
     db.commit()
     return {"message": "Deleted successfully"}
